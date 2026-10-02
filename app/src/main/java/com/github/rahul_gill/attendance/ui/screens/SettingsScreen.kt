@@ -62,6 +62,7 @@ import androidx.core.content.ContextCompat
 import com.github.rahul_gill.attendance.R
 import com.github.rahul_gill.attendance.db.BackupManager
 import com.github.rahul_gill.attendance.db.DBOps
+import com.github.rahul_gill.attendance.db.ScheduleRepository
 import com.github.rahul_gill.attendance.notification.ClassReminderScheduler
 import com.github.rahul_gill.attendance.notification.DailySchedulerWorker
 import com.github.rahul_gill.attendance.prefs.PreferenceManager
@@ -351,7 +352,7 @@ fun SettingsScreen(
                 summary = stringResource(R.string.import_export_summary),
                 onClick = { showImportExportDialog = true },
                 leadingIcon = {
-                    Icon(painter = painterResource(id = R.drawable.baseline_calendar_today_24), contentDescription = null)
+                    Icon(painter = painterResource(id = R.drawable.baseline_save_24), contentDescription = null)
                 }
             )
 
@@ -513,10 +514,9 @@ private fun ImportExportDialog(
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val clipData = clipboard.primaryClip
                     val pastedText = clipData?.getItemAt(0)?.text?.toString()
-                    Toast.makeText(context, R.string.clipboard_pasted, Toast.LENGTH_SHORT).show()
 
                     if (pastedText != null) {
-                        BackupManager.importFromJson(DBOps.instance, pastedText)
+                        ScheduleRepository.instance.importFromJson(pastedText)
                         Toast.makeText(context, R.string.import_success, Toast.LENGTH_SHORT).show()
                         onDismiss()
                     } else {

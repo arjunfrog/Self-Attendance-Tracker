@@ -1,5 +1,6 @@
 package com.github.rahul_gill.attendance.db.backup
 
+import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.github.rahul_gill.attendance.Database
@@ -232,6 +233,44 @@ class ImportTest {
         assertTrue(courses.any { it.courseName == "NewCourse1" })
         assertTrue(courses.any { it.courseName == "NewCourse2" })
     }
+
+    @Test
+    fun `import leaves no orphaned rows from replaced data`() = runBlocking {
+        val courseId = dbOps.createCourse(
+            name = "OldCourse",
+            requiredAttendancePercentage = 50.0,
+            schedule = listOf(ClassDetail(dayOfWeek = DayOfWeek.MONDAY))
+        )
+        val scheduleId = dbOps.getScheduleClassesForCourse(courseId).first().first().scheduleId
+        dbOps.markAttendanceForScheduleClass(
+            attendanceId = null,
+            classStatus = CourseClassStatus.Present,
+            scheduleId = scheduleId,
+            date = LocalDate.of(2026, 3, 23),
+            courseId = courseId
+        )
+        dbOps.createExtraClasses(
+            courseId = courseId,
+            timings = ExtraClassTimings(
+                date = LocalDate.of(2026, 3, 24),
+                startTime = LocalTime.of(9, 0),
+                endTime = LocalTime.of(10, 0)
+            )
+        )
+
+        BackupManager.importFromJson(dbOps, """{ "version": 1, "courses": [] }""")
+
+        // Foreign keys are off by default, so ON DELETE CASCADE can't be relied on
+        for (table in listOf("Course", "Schedule", "Attendance", "ExtraClasses")) {
+            assertEquals("rows left in $table", 0L, rowCount(table))
+        }
+    }
+
+    private fun rowCount(table: String): Long =
+        driver.executeQuery(null, "SELECT COUNT(*) FROM $table", { cursor ->
+            cursor.next()
+            QueryResult.Value(cursor.getLong(0)!!)
+        }, 0).value
 
     @Test
     fun `export then import roundtrip preserves all data`() = runBlocking {

@@ -258,5 +258,11 @@ SELECT * FROM Attendance WHERE courseId = ?;
 getAllExtraClassesForCourse:
 SELECT * FROM ExtraClasses WHERE courseId = ?;
 
-deleteAllData:
-DELETE FROM Course;
+-- Child tables are cleared explicitly since foreign keys (and so ON DELETE CASCADE)
+-- are not enabled on the connection.
+deleteAllData {
+    DELETE FROM Attendance;
+    DELETE FROM ExtraClasses;
+    DELETE FROM Schedule;
+    DELETE FROM Course;
+}

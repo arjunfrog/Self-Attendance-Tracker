@@ -93,7 +93,7 @@ object BackupManager {
         val queries = dbOps.db.appQueries
 
         dbOps.db.transaction {
-            // Clear all existing data (CASCADE deletes schedules, attendance, extra classes)
+            // Clear all existing data (courses, schedules, attendance, extra classes)
             queries.deleteAllData()
 
             for (i in 0 until coursesArray.length()) {
