@@ -56,6 +56,8 @@ jobs:
       - name: Unit tests
         run: bash ./gradlew test --stacktrace
       - name: Integration tests
+        # A healthy run takes a few minutes; fail instead of hanging until the 6h job limit
+        timeout-minutes: 30
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
@@ -65,6 +67,18 @@ jobs:
           # snapshot gets killed (exit code 137) before any test runs
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: ./gradlew connectedAndroidTest
+          script: |
+            adb logcat -c
+            adb logcat -v time > logcat.txt 2>&1 < /dev/null &
+            ./gradlew connectedAndroidTest
+      - name: Print device log
+        if: failure()
+        run: |
+          echo "::group::Test runner / crash / ANR lines"
+          grep -E "TestRunner|AndroidRuntime|ANR in|UiAutomator|GestureController" logcat.txt | tail -n 150 || true
+          echo "::endgroup::"
+          echo "::group::Last 300 lines"
+          tail -n 300 logcat.txt || true
+          echo "::endgroup::"
       - name: Stop Gradle
         run: ./gradlew --stop
