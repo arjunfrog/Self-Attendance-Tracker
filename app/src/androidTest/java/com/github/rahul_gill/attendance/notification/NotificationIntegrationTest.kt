@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
@@ -164,6 +165,14 @@ class NotificationIntegrationTest {
 
             // Actions only show up once the expand animation has run
             presentAction = device.wait(Until.findObject(presentButton), 5000)
+        }
+        if (presentAction == null) {
+            // On small screens our notification can sit at the bottom of the shade with its
+            // actions cut off, so scroll the notification list until they're visible. Only
+            // scroll when the list is scrollable: swiping up otherwise closes the shade.
+            presentAction = device
+                .findObject(By.res("com.android.systemui", "notification_stack_scroller").scrollable(true))
+                ?.scrollUntil(Direction.DOWN, Until.findObject(presentButton))
         }
         assertNotNull("Button with text '$presentText' not found in notification hierarchy: ${shadeHierarchy()}",
             presentAction)
